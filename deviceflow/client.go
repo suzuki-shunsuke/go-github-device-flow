@@ -3,7 +3,6 @@ package deviceflow
 import (
 	"errors"
 	"net/http"
-	"time"
 )
 
 // Client handles GitHub App authentication and access token generation using OAuth device flow.
@@ -22,12 +21,6 @@ func New(input *Input) *Client {
 	if input.HTTPClient == nil {
 		input.HTTPClient = http.DefaultClient
 	}
-	if input.Now == nil {
-		input.Now = time.Now
-	}
-	if input.NewTicker == nil {
-		input.NewTicker = time.NewTicker
-	}
 	return &Client{
 		input: input,
 	}
@@ -37,9 +30,7 @@ func New(input *Input) *Client {
 // It allows for dependency injection and makes testing easier by providing
 // customizable implementations of external dependencies.
 type Input struct {
-	HTTPClient *http.Client                       // HTTP client for API requests
-	Now        func() time.Time                   // Function to get current time (for testing)
-	NewTicker  func(d time.Duration) *time.Ticker // Function to create tickers (for testing)
+	HTTPClient *http.Client // HTTP client for API requests
 }
 
 var (

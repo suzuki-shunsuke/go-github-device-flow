@@ -5,7 +5,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestNew(t *testing.T) {
@@ -22,19 +21,11 @@ func TestNew(t *testing.T) {
 	if client.input.HTTPClient != httpClient {
 		t.Error("httpClient not set correctly")
 	}
-
-	if client.input.Now == nil {
-		t.Error("now function not set")
-	}
 }
 
 func newMockInput() *Input {
 	return &Input{
 		HTTPClient: http.DefaultClient,
-		Now:        time.Now,
-		NewTicker: func(_ time.Duration) *time.Ticker {
-			return time.NewTicker(10 * time.Millisecond)
-		},
 	}
 }
 

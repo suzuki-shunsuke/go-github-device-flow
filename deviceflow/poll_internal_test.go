@@ -165,8 +165,6 @@ func TestClient_Poll(t *testing.T) { //nolint:funlen,gocognit
 				}
 				input := &Input{
 					HTTPClient: &http.Client{Transport: transport},
-					Now:        time.Now,
-					NewTicker:  time.NewTicker,
 				}
 				client := New(input)
 

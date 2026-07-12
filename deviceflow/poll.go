@@ -17,17 +17,17 @@ const (
 // It respects the polling interval and handles authorization pending and slow down responses.
 // The polling continues until the device code expires or the user completes authentication.
 func (c *Client) Poll(ctx context.Context, logger *slog.Logger, clientID string, deviceCode *DeviceCodeResponse, input *InputGetAccessToken) (*AccessToken, error) {
-	ticker := c.input.NewTicker(max(time.Duration(deviceCode.Interval)*time.Second, 5*time.Second)) //nolint:mnd
+	ticker := time.NewTicker(max(time.Duration(deviceCode.Interval)*time.Second, 5*time.Second)) //nolint:mnd
 	defer ticker.Stop()
 
-	deadline := c.input.Now().Add(time.Duration(deviceCode.ExpiresIn) * time.Second)
+	deadline := time.Now().Add(time.Duration(deviceCode.ExpiresIn) * time.Second)
 
 	for {
 		select {
 		case <-ctx.Done():
 			return nil, fmt.Errorf("context was cancelled: %w", ctx.Err())
 		case <-ticker.C:
-			if c.input.Now().After(deadline) {
+			if time.Now().After(deadline) {
 				return nil, errors.New("device code expired")
 			}
 
