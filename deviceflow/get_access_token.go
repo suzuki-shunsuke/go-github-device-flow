@@ -14,7 +14,10 @@ const (
 	wordClientID = "client_id"
 )
 
+// InputGetAccessToken holds optional parameters for GetAccessToken and Poll.
 type InputGetAccessToken struct {
+	// RepositoryID scopes the requested access token to a single repository.
+	// When empty, the token is not restricted to a specific repository.
 	RepositoryID string
 }
 
@@ -62,6 +65,9 @@ func (c *Client) GetAccessToken(ctx context.Context, clientID, deviceCode string
 	return token, resp, body, err
 }
 
+// parseAccessToken decodes an access token response body and maps its error
+// fields to an error. It returns errEmptyAccessToken when the response contains
+// neither an error nor an access token.
 func parseAccessToken(body []byte) (*AccessToken, error) {
 	token := &AccessToken{}
 	if err := json.Unmarshal(body, token); err != nil {

@@ -1,5 +1,7 @@
-// Package deviceflow handles GitHub App access token generation using OAuth device flow.
-// It provides functionality to authenticate GitHub Apps and obtain access tokens.
-// The public contract types (OnetimeCodeUI, Browser, DeviceCodeResponse) live in the
-// public ghtkn/deviceflow package.
+// Package deviceflow authenticates GitHub Apps and obtains access tokens using
+// the OAuth device flow.
+//
+// A Client requests a device code (GetDeviceCode), polls until the user
+// authorizes it (Poll, which calls GetAccessToken), and refreshes an expired
+// token (RefreshToken).
 package deviceflow

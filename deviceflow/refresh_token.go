@@ -12,6 +12,9 @@ import (
 
 const wordRefreshToken = "refresh_token"
 
+// RefreshToken exchanges a refresh token for a new access token.
+// It returns the new access token, the raw HTTP response and body, and an error
+// if the request fails or GitHub reports an error.
 func (c *Client) RefreshToken(ctx context.Context, clientID, refreshToken string) (*AccessToken, *http.Response, []byte, error) {
 	reqBody := map[string]string{
 		wordClientID:     clientID,
