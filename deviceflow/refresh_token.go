@@ -10,11 +10,13 @@ import (
 	"net/http"
 )
 
+const wordRefreshToken = "refresh_token"
+
 func (c *Client) RefreshToken(ctx context.Context, clientID, refreshToken string) (*AccessToken, *http.Response, []byte, error) {
 	reqBody := map[string]string{
-		"client_id":     clientID,
-		"refresh_token": refreshToken,
-		"grant_type":    "refresh_token",
+		wordClientID:     clientID,
+		wordRefreshToken: refreshToken,
+		"grant_type":     wordRefreshToken,
 	}
 
 	jsonData, err := json.Marshal(reqBody)

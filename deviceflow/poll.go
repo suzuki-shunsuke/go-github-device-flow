@@ -50,6 +50,9 @@ func (c *Client) Poll(ctx context.Context, logger *slog.Logger, clientID string,
 // It returns nil when polling should continue, or a non-nil error when polling
 // should stop and return that error.
 func (c *Client) handlePollError(logger *slog.Logger, ticker *time.Ticker, token *AccessToken, err error) error {
+	if token == nil {
+		return err
+	}
 	switch token.Error {
 	case wordAuthPending:
 		logger.Debug(
