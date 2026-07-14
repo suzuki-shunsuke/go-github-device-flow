@@ -59,6 +59,7 @@ func (c *Client) handlePollError(logger *slog.Logger, ticker *time.Ticker, token
 	case wordAuthPending:
 		logger.Debug(
 			"device flow's authorization is still pending",
+			"error", token.Error,
 			"error_description", token.ErrorDescription,
 			"error_uri", token.ErrorURI,
 		)
@@ -66,6 +67,7 @@ func (c *Client) handlePollError(logger *slog.Logger, ticker *time.Ticker, token
 	case wordSlowDown:
 		logger.Debug(
 			"device flow's polling was too frequent, slowing down",
+			"error", token.Error,
 			"error_description", token.ErrorDescription,
 			"error_uri", token.ErrorURI,
 			"interval", token.Interval,
