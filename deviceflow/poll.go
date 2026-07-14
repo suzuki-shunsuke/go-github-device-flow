@@ -11,13 +11,15 @@ import (
 const (
 	wordAuthPending = "authorization_pending"
 	wordSlowDown    = "slow_down"
+	// pollIntervalBuffer is an extra margin added to the polling interval to prevent slow_down.
+	pollIntervalBuffer = 100 * time.Millisecond
 )
 
 // Poll continuously polls GitHub for an access token.
 // It respects the polling interval and handles authorization pending and slow down responses.
 // The polling continues until the device code expires or the user completes authentication.
 func (c *Client) Poll(ctx context.Context, logger *slog.Logger, clientID string, deviceCode *DeviceCodeResponse, input *InputGetAccessToken) (*AccessToken, error) {
-	ticker := time.NewTicker(max(time.Duration(deviceCode.Interval)*time.Second, 5*time.Second)) //nolint:mnd
+	ticker := time.NewTicker(max(time.Duration(deviceCode.Interval)*time.Second, 5*time.Second) + pollIntervalBuffer) //nolint:mnd
 	defer ticker.Stop()
 
 	deadline := time.Now().Add(time.Duration(deviceCode.ExpiresIn) * time.Second)
@@ -68,9 +70,9 @@ func (c *Client) handlePollError(logger *slog.Logger, ticker *time.Ticker, token
 			"error_uri", token.ErrorURI,
 			"interval", token.Interval,
 		)
-		interval := 10 * time.Second //nolint:mnd
+		interval := 10*time.Second + pollIntervalBuffer //nolint:mnd
 		if token.Interval > 0 {
-			interval = time.Duration(token.Interval) * time.Second
+			interval = time.Duration(token.Interval)*time.Second + pollIntervalBuffer
 		}
 		ticker.Reset(interval)
 		return nil
