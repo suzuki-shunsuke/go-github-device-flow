@@ -24,6 +24,13 @@ type InputGetAccessToken struct {
 // GetAccessToken checks if an access token is available for the given device code.
 // It returns the access token if available, or an error indicating the current status.
 func (c *Client) GetAccessToken(ctx context.Context, clientID, deviceCode string, input *InputGetAccessToken) (*AccessToken, *http.Response, []byte, error) {
+	if clientID == "" {
+		return nil, nil, nil, errors.New("client id is required")
+	}
+	if deviceCode == "" {
+		return nil, nil, nil, errors.New("device code is required")
+	}
+
 	reqBody := map[string]string{
 		wordClientID:  clientID,
 		"device_code": deviceCode,
@@ -58,7 +65,7 @@ func (c *Client) GetAccessToken(ctx context.Context, clientID, deviceCode string
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, resp, body, errNotOK
+		return nil, resp, body, fmt.Errorf("%w (%d)", errNotOK, resp.StatusCode)
 	}
 
 	token, err := parseAccessToken(body)

@@ -19,6 +19,13 @@ const (
 // It respects the polling interval and handles authorization pending and slow down responses.
 // The polling continues until the device code expires or the user completes authentication.
 func (c *Client) Poll(ctx context.Context, logger *slog.Logger, clientID string, deviceCode *DeviceCodeResponse, input *InputGetAccessToken) (*AccessToken, error) {
+	if deviceCode == nil {
+		return nil, errors.New("device code is required")
+	}
+	if logger == nil {
+		logger = slog.New(slog.DiscardHandler)
+	}
+
 	ticker := time.NewTicker(max(time.Duration(deviceCode.Interval)*time.Second, 5*time.Second) + pollIntervalBuffer) //nolint:mnd
 	defer ticker.Stop()
 

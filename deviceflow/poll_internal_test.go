@@ -14,18 +14,66 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestClient_Poll(t *testing.T) { //nolint:funlen,gocognit
+func TestClient_Poll(t *testing.T) { //nolint:funlen,gocognit,cyclop
 	t.Parallel()
 	tests := []struct {
 		name        string
 		clientID    string
 		deviceCode  *DeviceCodeResponse
 		handler     http.HandlerFunc
+		nilLogger   bool
 		want        *AccessToken
 		wantErr     bool
 		errContains string
 		timeout     time.Duration
 	}{
+		{
+			name:     "nil logger does not panic",
+			clientID: "test-client-id",
+			deviceCode: &DeviceCodeResponse{
+				DeviceCode:      "device123",
+				UserCode:        "USER-CODE",
+				VerificationURI: "https://github.com/login/device",
+				ExpiresIn:       900,
+				Interval:        1,
+			},
+			// A nil logger must be tolerated: the first poll returns
+			// authorization_pending, which exercises the logger.Debug path in
+			// handlePollError before the second poll succeeds.
+			nilLogger: true,
+			handler: func() http.HandlerFunc {
+				callCount := 0
+				return func(w http.ResponseWriter, _ *http.Request) {
+					callCount++
+					if callCount == 1 {
+						json.NewEncoder(w).Encode(AccessToken{Error: "authorization_pending"}) //nolint:errcheck,gosec
+					} else {
+						json.NewEncoder(w).Encode(AccessToken{ //nolint:errcheck,gosec
+							AccessToken: "gho_testtoken123",
+							ExpiresIn:   28800,
+						})
+					}
+				}
+			}(),
+			want: &AccessToken{
+				AccessToken: "gho_testtoken123",
+				ExpiresIn:   28800,
+			},
+			wantErr: false,
+			timeout: 300 * time.Second,
+		},
+		{
+			name:       "nil device code returns error",
+			clientID:   "test-client-id",
+			deviceCode: nil,
+			handler: func(_ http.ResponseWriter, _ *http.Request) {
+				t.Error("handler should not be called with nil device code")
+			},
+			want:        nil,
+			wantErr:     true,
+			errContains: "device code is required",
+			timeout:     300 * time.Second,
+		},
 		{
 			name:     "successful after one poll",
 			clientID: "test-client-id",
@@ -170,7 +218,10 @@ func TestClient_Poll(t *testing.T) { //nolint:funlen,gocognit
 
 				ctx, cancel := context.WithTimeout(context.Background(), tt.timeout)
 				defer cancel()
-				logger := slog.New(slog.DiscardHandler)
+				var logger *slog.Logger
+				if !tt.nilLogger {
+					logger = slog.New(slog.DiscardHandler)
+				}
 
 				got, err := client.Poll(ctx, logger, tt.clientID, tt.deviceCode, nil)
 				if err != nil {

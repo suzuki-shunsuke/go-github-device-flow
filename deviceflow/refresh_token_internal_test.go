@@ -134,6 +134,28 @@ func TestClient_RefreshToken(t *testing.T) { //nolint:gocognit,cyclop,funlen
 			wantErr: true,
 			errMsg:  "unmarshal response body as JSON",
 		},
+		{
+			name:         "empty client ID",
+			clientID:     "",
+			refreshToken: "refresh123",
+			handler: func(_ http.ResponseWriter, _ *http.Request) {
+				t.Error("handler should not be called with empty client ID")
+			},
+			want:    nil,
+			wantErr: true,
+			errMsg:  "client id is required",
+		},
+		{
+			name:         "empty refresh token",
+			clientID:     "test-client-id",
+			refreshToken: "",
+			handler: func(_ http.ResponseWriter, _ *http.Request) {
+				t.Error("handler should not be called with empty refresh token")
+			},
+			want:    nil,
+			wantErr: true,
+			errMsg:  "refresh token is required",
+		},
 	}
 
 	for _, tt := range tests {

@@ -52,7 +52,7 @@ func (c *Client) GetDeviceCode(ctx context.Context, clientID string) (*DeviceCod
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, resp, body, errNotOK
+		return nil, resp, body, fmt.Errorf("%w (%d)", errNotOK, resp.StatusCode)
 	}
 
 	deviceCode := &DeviceCodeResponse{}
