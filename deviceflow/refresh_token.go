@@ -16,6 +16,13 @@ const wordRefreshToken = "refresh_token"
 // It returns the new access token, the raw HTTP response and body, and an error
 // if the request fails or GitHub reports an error.
 func (c *Client) RefreshToken(ctx context.Context, clientID, refreshToken string) (*AccessToken, *http.Response, []byte, error) {
+	if clientID == "" {
+		return nil, nil, nil, errors.New("client id is required")
+	}
+	if refreshToken == "" {
+		return nil, nil, nil, errors.New("refresh token is required")
+	}
+
 	reqBody := map[string]string{
 		wordClientID:     clientID,
 		wordRefreshToken: refreshToken,
@@ -47,22 +54,9 @@ func (c *Client) RefreshToken(ctx context.Context, clientID, refreshToken string
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, resp, body, errNotOK
+		return nil, resp, body, fmt.Errorf("%w (%d)", errNotOK, resp.StatusCode)
 	}
 
-	token := &AccessToken{}
-	if err := json.Unmarshal(body, token); err != nil {
-		return nil, resp, body, fmt.Errorf("unmarshal response body as JSON: %w", err)
-	}
-	if token.Error != "" {
-		if token.ErrorDescription != "" {
-			return token, resp, body, errors.New(token.ErrorDescription)
-		}
-		return token, resp, body, errors.New(token.Error)
-	}
-
-	if token.AccessToken == "" {
-		return token, resp, body, errEmptyAccessToken
-	}
-	return token, resp, body, nil
+	token, err := parseAccessToken(body)
+	return token, resp, body, err
 }

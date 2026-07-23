@@ -119,6 +119,28 @@ func TestClient_GetAccessToken(t *testing.T) { //nolint:gocognit,cyclop,funlen
 			wantErr: true,
 			errMsg:  "access_token is empty",
 		},
+		{
+			name:       "empty client ID",
+			clientID:   "",
+			deviceCode: "device123",
+			handler: func(_ http.ResponseWriter, _ *http.Request) {
+				t.Error("handler should not be called with empty client ID")
+			},
+			want:    nil,
+			wantErr: true,
+			errMsg:  "client id is required",
+		},
+		{
+			name:       "empty device code",
+			clientID:   "test-client-id",
+			deviceCode: "",
+			handler: func(_ http.ResponseWriter, _ *http.Request) {
+				t.Error("handler should not be called with empty device code")
+			},
+			want:    nil,
+			wantErr: true,
+			errMsg:  "device code is required",
+		},
 	}
 
 	for _, tt := range tests {
