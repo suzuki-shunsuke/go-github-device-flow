@@ -11,6 +11,7 @@ linters:
     - err113
     - exhaustive
     - exhaustruct
+    - exhaustruct_v5
     - godot
     - godox
     - ireturn
@@ -35,7 +36,7 @@ linters:
     paths:
       - third_party$
       - builtin$
-      - examples$
+      - ^examples/
     rules:
       - path: _test\.go
         linters:

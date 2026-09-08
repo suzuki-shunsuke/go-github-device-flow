@@ -12,20 +12,17 @@ local linters = new Mapping<String, Step> {
     glob = List("**/*")
     check = "nllint -s {{files}}"
     fix = "nllint -s -f {{files}}"
-    batch = true
   }
   ["go-test"] {
     glob = List("go.mod", "go.sum", "**/*.go")
     check = "go test -race -covermode=atomic ./..."
     fix = "go test -race -covermode=atomic ./..." // run as check in fix mode (no real fix possible)
-    batch = true
   }
   ["langcheck"] {
     // https://github.com/suzuki-shunsuke/langcheck
     glob = List("**/*")
     check = "langcheck check {{files}}"
     fix = "langcheck check {{files}}" // run as check in fix mode (no real fix possible)
-    batch = true
   }
 }
 
