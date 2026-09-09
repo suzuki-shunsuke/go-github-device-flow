@@ -15,6 +15,11 @@ const (
 	pollIntervalBuffer = 100 * time.Millisecond
 )
 
+func increaseIntervalForWSL(interval time.Duration) time.Duration {
+	// https://github.com/suzuki-shunsuke/go-github-device-flow/issues/9
+	return interval * 13 / 10 //nolint:mnd
+}
+
 // Poll continuously polls GitHub for an access token.
 // It respects the polling interval and handles authorization pending and slow down responses.
 // The polling continues until the device code expires or the user completes authentication.
@@ -26,7 +31,7 @@ func (c *Client) Poll(ctx context.Context, logger *slog.Logger, clientID string,
 		logger = slog.New(slog.DiscardHandler)
 	}
 
-	ticker := time.NewTicker(max(time.Duration(deviceCode.Interval)*time.Second, 5*time.Second) + pollIntervalBuffer) //nolint:mnd
+	ticker := time.NewTicker(increaseIntervalForWSL(max(time.Duration(deviceCode.Interval)*time.Second, 5*time.Second) + pollIntervalBuffer)) //nolint:mnd
 	defer ticker.Stop()
 
 	deadline := time.Now().Add(time.Duration(deviceCode.ExpiresIn) * time.Second)
@@ -83,7 +88,7 @@ func (c *Client) handlePollError(logger *slog.Logger, ticker *time.Ticker, token
 		if token.Interval > 0 {
 			interval = time.Duration(token.Interval)*time.Second + pollIntervalBuffer
 		}
-		ticker.Reset(interval)
+		ticker.Reset(increaseIntervalForWSL(interval))
 		return nil
 	default:
 		return err
