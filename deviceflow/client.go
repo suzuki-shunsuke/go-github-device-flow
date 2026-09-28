@@ -36,6 +36,7 @@ type Input struct {
 var (
 	errNotOK            = errors.New("status code isn't 200")
 	errEmptyAccessToken = errors.New("access_token is empty")
+	errTooManySlowDowns = errors.New("GitHub rejected too many polls as too frequent")
 )
 
 // AccessToken represents the response from GitHub's access token endpoint.
