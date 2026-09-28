@@ -27,8 +27,9 @@ const (
 
 // pollState carries the mutable state of one Poll call.
 type pollState struct {
-	// interval is the base polling interval. It grows by 5 seconds on every
-	// slow_down, as RFC 8628 section 3.5 requires.
+	// interval is the polling interval GitHub asked for. It grows by 5 seconds
+	// on every slow_down, as RFC 8628 section 3.5 requires. It does not include
+	// pollIntervalBuffer, which wait adds.
 	interval time.Duration
 	// slowDowns counts the slow_down responses received so far. It also decides
 	// the safety factor applied by wait.
@@ -56,7 +57,7 @@ type pollState struct {
 // A machine with an accurate clock never receives slow_down, so it keeps
 // polling at exactly the interval GitHub asked for and pays nothing for this.
 func (s *pollState) wait() time.Duration {
-	d := s.interval
+	d := s.interval + pollIntervalBuffer
 	for range s.slowDowns {
 		d = d * slowDownFactorNumerator / slowDownFactorDenominator
 	}
@@ -94,7 +95,7 @@ func (c *Client) Poll(ctx context.Context, logger *slog.Logger, clientID string,
 	}
 
 	state := &pollState{
-		interval: max(time.Duration(deviceCode.Interval)*time.Second, minPollInterval) + pollIntervalBuffer,
+		interval: max(time.Duration(deviceCode.Interval)*time.Second, minPollInterval),
 		start:    time.Now(),
 	}
 
@@ -161,7 +162,7 @@ func (c *Client) handlePollError(logger *slog.Logger, ticker *time.Ticker, state
 		}
 		// RFC 8628 section 3.5 requires growing the interval by 5 seconds.
 		// GitHub also returns the interval it wants, so honour whichever is larger.
-		state.interval = max(state.interval+slowDownIncrement, time.Duration(token.Interval)*time.Second+pollIntervalBuffer)
+		state.interval = max(state.interval+slowDownIncrement, time.Duration(token.Interval)*time.Second)
 		ticker.Reset(state.wait())
 		return nil
 	default:
