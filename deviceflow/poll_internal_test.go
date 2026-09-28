@@ -3,6 +3,7 @@ package deviceflow
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -150,8 +151,8 @@ func TestClient_Poll(t *testing.T) { //nolint:funlen,gocognit,cyclop
 					callCount++
 					if callCount == 1 {
 						// First call returns slow_down with no interval, so
-						// handlePollError takes the 10s fallback reset. The fake
-						// clock makes that instant.
+						// handlePollError falls back to growing the interval by
+						// the 5s of RFC 8628. The fake clock makes that instant.
 						resp := AccessToken{
 							Error: "slow_down",
 						}
@@ -243,4 +244,72 @@ func TestClient_Poll(t *testing.T) { //nolint:funlen,gocognit,cyclop
 			})
 		})
 	}
+}
+
+// recordingTransport records when each request is made, on the fake clock of
+// the synctest bubble it runs in, so a test can assert how long Poll waited
+// between polls.
+type recordingTransport struct {
+	base  http.RoundTripper
+	times []time.Time
+}
+
+func (t *recordingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	t.times = append(t.times, time.Now())
+	return t.base.RoundTrip(req) //nolint:wrapcheck
+}
+
+// TestClient_Poll_slowDown covers the safety factor applied on slow_down. A
+// monotonic clock that runs fast makes every wait fall short of what GitHub
+// requires by a fraction of it, so the wait is multiplied by 1.3 once per
+// slow_down. After enough of them Poll gives up instead of polling until the
+// device code expires.
+func TestClient_Poll_slowDown(t *testing.T) {
+	t.Parallel()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		json.NewEncoder(w).Encode(AccessToken{Error: "slow_down"}) //nolint:errcheck,gosec
+	}))
+	defer server.Close()
+
+	synctest.Test(t, func(t *testing.T) {
+		transport := &recordingTransport{
+			base: &testTransport{
+				server: server,
+				base:   &http.Transport{DisableKeepAlives: true},
+			},
+		}
+		client := New(&Input{HTTPClient: &http.Client{Transport: transport}})
+
+		ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
+		defer cancel()
+
+		start := time.Now()
+		if _, err := client.Poll(ctx, slog.New(slog.DiscardHandler), "test-client-id", &DeviceCodeResponse{
+			DeviceCode:      "device123",
+			UserCode:        "USER-CODE",
+			VerificationURI: "https://github.com/login/device",
+			ExpiresIn:       900,
+			Interval:        1,
+		}, nil); !errors.Is(err, errTooManySlowDowns) {
+			t.Fatalf("error = %v, want %v", err, errTooManySlowDowns)
+		}
+
+		// The base interval is GitHub's 5s minimum plus the 100ms buffer, and it
+		// grows by the 5s of RFC 8628 section 3.5 on every slow_down. On top of
+		// that, the wait is multiplied by 1.3 once per slow_down received so far.
+		want := []time.Duration{
+			5100 * time.Millisecond,  // no slow_down yet
+			13130 * time.Millisecond, // 10.1s * 1.3
+			25519 * time.Millisecond, // 15.1s * 1.3 * 1.3
+		}
+		got := make([]time.Duration, 0, len(transport.times))
+		prev := start
+		for _, tm := range transport.times {
+			got = append(got, tm.Sub(prev))
+			prev = tm
+		}
+		if diff := cmp.Diff(want, got); diff != "" {
+			t.Errorf("polling intervals mismatch (-want +got):\n%s", diff)
+		}
+	})
 }
